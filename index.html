@@ -93,10 +93,8 @@
 
 <script>
 // ── Config ─────────────────────────────────────────────────────────────────────
-// Change this to your bot host URL
-const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'http://localhost:8080/api'
-  : '/api';   // same host if you reverse-proxy
+// Direct connection to your Wispbyte host
+const API = 'http://217.160.3.69:11735/api';
 
 const TIERS = ['LT5','HT5','LT4','HT4','LT3','HT3','LT2','HT2','LT1','HT1'];
 const TIER_COLOR = {
