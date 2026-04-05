@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IV Tierlist</title>
+<style>
+  :root {
+    --bg: #0e0e14;
+    --surface: #16161f;
+    --card: #1e1e2e;
+    --border: #2a2a3e;
+    --accent: #5865f2;
+    --accent2: #eb459e;
+    --text: #e0e0f0;
+    --muted: #888;
+    --lt5:#808080;--ht5:#a0a0a0;
+    --lt4:#00bfff;--ht4:#1e90ff;
+    --lt3:#00c800;--ht3:#32cd32;
+    --lt2:#ffa500;--ht2:#ff8c00;
+    --lt1:#ff0000;--ht1:#dc143c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; gap: 16px; height: 60px; }
+  header h1 { font-size: 1.3rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  nav { display: flex; gap: 4px; margin-left: auto; }
+  nav button { background: none; border: none; color: var(--muted); cursor: pointer; padding: 8px 14px; border-radius: 8px; font-size: .9rem; transition: all .2s; }
+  nav button:hover, nav button.active { background: var(--card); color: var(--text); }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+
+  /* Gamemode tabs */
+  .gm-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .gm-tab { padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; font-size: .85rem; transition: all .2s; }
+  .gm-tab:hover, .gm-tab.active { border-color: var(--accent); color: var(--accent); background: rgba(88,101,242,.1); }
+
+  /* Tier sections */
+  .tier-section { margin-bottom: 24px; }
+  .tier-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .tier-badge { padding: 3px 12px; border-radius: 12px; font-size: .8rem; font-weight: 700; color: #fff; }
+  .tier-LT5 { background: var(--lt5); } .tier-HT5 { background: var(--ht5); }
+  .tier-LT4 { background: var(--lt4); } .tier-HT4 { background: var(--ht4); }
+  .tier-LT3 { background: var(--lt3); } .tier-HT3 { background: var(--ht3); }
+  .tier-LT2 { background: var(--lt2); } .tier-HT2 { background: var(--ht2); }
+  .tier-LT1 { background: var(--lt1); } .tier-HT1 { background: var(--ht1); }
+
+  .player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+  .player-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; font-size: .88rem; }
+  .player-card img { width: 32px; height: 32px; border-radius: 4px; image-rendering: pixelated; }
+  .player-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Overall */
+  .overall-list { display: flex; flex-direction: column; gap: 4px; }
+  .overall-row { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; display: flex; align-items: center; gap: 12px; }
+  .rank { font-size: .8rem; color: var(--muted); min-width: 28px; }
+  .rank.gold { color: #ffd700; font-weight: 700; }
+  .rank.silver { color: #c0c0c0; font-weight: 700; }
+  .rank.bronze { color: #cd7f32; font-weight: 700; }
+  .overall-name { font-weight: 600; flex: 1; }
+  .tier-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tier-chip { font-size: .72rem; padding: 2px 8px; border-radius: 10px; color: #fff; font-weight: 600; }
+
+  /* Loading / empty */
+  .state-msg { text-align: center; padding: 60px 20px; color: var(--muted); font-size: .95rem; }
+  .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; margin-bottom: 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚔️ IV Tierlist</h1>
+  <nav>
+    <button class="active" id="nav-tierlist" onclick="showPage('tierlist')">Tierlists</button>
+    <button id="nav-overall" onclick="showPage('overall')">Overall Top 50</button>
+  </nav>
+</header>
+
+<div class="container">
+  <!-- Tierlist page -->
+  <div id="page-tierlist">
+    <div class="gm-tabs" id="gm-tabs"></div>
+    <div id="tierlist-content"><div class="state-msg"><div class="spinner"></div><br>Loading…</div></div>
+  </div>
+
+  <!-- Overall page -->
+  <div id="page-overall" style="display:none">
+    <div id="overall-content"><div class="state-msg"><div class="spinner"></div><br>Loading…</div></div>
+  </div>
+</div>
+
+<script>
+// ── Config ─────────────────────────────────────────────────────────────────────
+// Change this to your bot host URL
+const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:8080/api'
+  : '/api';   // same host if you reverse-proxy
+
+const TIERS = ['LT5','HT5','LT4','HT4','LT3','HT3','LT2','HT2','LT1','HT1'];
+const TIER_COLOR = {
+  LT5:'#808080',HT5:'#a0a0a0',LT4:'#00bfff',HT4:'#1e90ff',
+  LT3:'#00c800',HT3:'#32cd32',LT2:'#ffa500',HT2:'#ff8c00',
+  LT1:'#ff0000',HT1:'#dc143c'
+};
+
+let gamemodes = [];
+let currentGM = null;
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const r = await fetch(`${API}/gamemodes`);
+    const d = await r.json();
+    gamemodes = d.gamemodes || [];
+    renderGMTabs();
+    if (gamemodes.length) loadTierlist(gamemodes[0]);
+  } catch(e) {
+    document.getElementById('tierlist-content').innerHTML =
+      `<div class="state-msg">⚠️ Could not connect to bot API.<br><small>${e}</small></div>`;
+  }
+}
+
+function renderGMTabs() {
+  const el = document.getElementById('gm-tabs');
+  el.innerHTML = gamemodes.map(gm =>
+    `<button class="gm-tab${gm===currentGM?' active':''}" onclick="loadTierlist('${gm}')">${gm}</button>`
+  ).join('');
+}
+
+async function loadTierlist(gm) {
+  currentGM = gm;
+  renderGMTabs();
+  const el = document.getElementById('tierlist-content');
+  el.innerHTML = '<div class="state-msg"><div class="spinner"></div><br>Loading…</div>';
+  try {
+    const r = await fetch(`${API}/tiers/${encodeURIComponent(gm)}`);
+    const d = await r.json();
+    renderTierlist(d.entries || []);
+  } catch(e) {
+    el.innerHTML = `<div class="state-msg">⚠️ Failed to load tierlist.</div>`;
+  }
+}
+
+function renderTierlist(entries) {
+  const el = document.getElementById('tierlist-content');
+  // Group by tier
+  const groups = {};
+  for (const t of TIERS) groups[t] = [];
+  for (const e of entries) if (groups[e.tier]) groups[e.tier].push(e);
+
+  let html = '';
+  for (const t of TIERS) {
+    const players = groups[t];
+    if (!players.length) continue;
+    html += `<div class="tier-section">
+      <div class="tier-header">
+        <span class="tier-badge tier-${t}">${t}</span>
+        <span style="color:var(--muted);font-size:.82rem">${players.length} player${players.length!==1?'s':''}</span>
+      </div>
+      <div class="player-grid">
+        ${players.map(p => `
+          <div class="player-card">
+            <img src="https://crafatar.com/avatars/${encodeURIComponent(p.minecraft_name)}?size=32&overlay=true" alt="" loading="lazy" onerror="this.src='https://crafatar.com/avatars/MHF_Steve?size=32'">
+            <span class="player-name" title="${p.minecraft_name}">${p.minecraft_name}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }
+  el.innerHTML = html || '<div class="state-msg">No players tiered in this gamemode yet.</div>';
+}
+
+async function loadOverall() {
+  const el = document.getElementById('overall-content');
+  el.innerHTML = '<div class="state-msg"><div class="spinner"></div><br>Loading…</div>';
+  try {
+    const r = await fetch(`${API}/overall`);
+    const d = await r.json();
+    renderOverall(d.top50 || []);
+  } catch(e) {
+    el.innerHTML = `<div class="state-msg">⚠️ Failed to load overall list.</div>`;
+  }
+}
+
+function renderOverall(entries) {
+  const el = document.getElementById('overall-content');
+  if (!entries.length) {
+    el.innerHTML = '<div class="state-msg">No data yet.</div>';
+    return;
+  }
+  const rankClass = i => i===1?'gold':i===2?'silver':i===3?'bronze':'';
+  let html = '<div class="overall-list">';
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i];
+    const tiers = (e.all_tiers||'').split(',').filter(Boolean).map(s => {
+      const [gm, tier] = s.split(':');
+      return `<span class="tier-chip" style="background:${TIER_COLOR[tier]||'#555'}">${tier} ${gm}</span>`;
+    }).join('');
+    html += `<div class="overall-row">
+      <span class="rank ${rankClass(i+1)}">#${i+1}</span>
+      <img src="https://crafatar.com/avatars/${encodeURIComponent(e.minecraft_name)}?size=28&overlay=true" style="width:28px;height:28px;border-radius:4px;image-rendering:pixelated" onerror="this.src='https://crafatar.com/avatars/MHF_Steve?size=28'" loading="lazy">
+      <span class="overall-name">${e.minecraft_name}</span>
+      <div class="tier-chips">${tiers}</div>
+    </div>`;
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────────────
+function showPage(page) {
+  document.getElementById('page-tierlist').style.display = page==='tierlist' ? '' : 'none';
+  document.getElementById('page-overall').style.display  = page==='overall'  ? '' : 'none';
+  document.getElementById('nav-tierlist').className = page==='tierlist' ? 'active' : '';
+  document.getElementById('nav-overall').className  = page==='overall'  ? 'active' : '';
+  if (page === 'overall') loadOverall();
+}
+
+init();
+</script>
+</body>
+</html>
